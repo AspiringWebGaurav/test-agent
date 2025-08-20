@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Auth helpers ----------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ---------- Generic helpers ----------
+    function hasOnly(fields, data) {
+      return data.keys().hasOnly(fields);
+    }
+    function isBool(v) { return v is bool; }
+    function isInt(v)  { return v is int; }
+
+    function isValidTitle(t) {
+      return t is string && t.size() >= 1 && t.size() <= 120;
+    }
+    function isValidNotesMap(d) {
+      return !('notes' in d) || (d.notes is string && d.notes.size() <= 5000);
+    }
+    function isValidDueAtMap(d) {
+      return !('dueAt' in d) || (d.dueAt is timestamp);
+    }
+
+    // ---- New/optional fields ----
+    function isValidPriorityMap(d) {
+      return !('priority' in d) || (isInt(d.priority) && d.priority >= 0 && d.priority <= 4);
+    }
+    function isValidTagsMap(d) {
+      return !('tags' in d) || (d.tags is list && d.tags.size() <= 20);
+    }
+    function isValidRecurrenceMap(d) {
+      return !('recurrence' in d) || (d.recurrence is string && d.recurrence.size() <= 200);
+    }
+    function isValidRemindersMap(d) {
+      return !('reminders' in d) || (d.reminders is list && d.reminders.size() <= 20);
+    }
+    function isValidSubtasksMap(d) {
+      return !('subtasks' in d) || (d.subtasks is list && d.subtasks.size() <= 200);
+    }
+    function isValidAttachmentsMap(d) {
+      return !('attachments' in d) || (d.attachments is list && d.attachments.size() <= 10);
+    }
+    function isValidStartDurationMap(d) {
+      return (!('startAt' in d) || d.startAt is timestamp)
+          && (!('durationMin' in d) || isInt(d.durationMin));
+    }
+    function isValidOrderEstimateFocusMap(d) {
+      return (!('orderIndex' in d) || isInt(d.orderIndex))
+          && (!('estimateMin' in d) || isInt(d.estimateMin))
+          && (!('focusCount' in d) || isInt(d.focusCount));
+    }
+    function isValidIsStarredMap(d) {
+      return !('isStarred' in d) || isBool(d.isStarred);
+    }
+
+    function isValidTodoSnapshot(d) {
+      return isValidTitle(d.title)
+        && isValidNotesMap(d)
+        && isValidDueAtMap(d)
+        && isValidPriorityMap(d)
+        && isValidTagsMap(d)
+        && isValidRecurrenceMap(d)
+        && isValidRemindersMap(d)
+        && isValidSubtasksMap(d)
+        && isValidAttachmentsMap(d)
+        && isValidStartDurationMap(d)
+        && isValidOrderEstimateFocusMap(d)
+        && isValidIsStarredMap(d)
+        && ('isCompleted' in d) && isBool(d.isCompleted)
+        && ('createdAt' in d) && (d.createdAt is timestamp)
+        && ('updatedAt' in d) && (d.updatedAt is timestamp);
+    }
+
+    // ---------- User subtree ----------
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /notes/{noteId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /money/{trackerId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /todos/{todoId} {
+        allow read: if isOwner(userId);
+
+        allow create: if isOwner(userId)
+          && hasOnly([
+            'id','title','notes','dueAt','isCompleted','createdAt','updatedAt',
+            'priority','tags','recurrence','reminders','subtasks','attachments',
+            'startAt','durationMin','orderIndex','estimateMin','focusCount','isStarred'
+          ], request.resource.data)
+          && (request.resource.data.id is string)
+          && isValidTodoSnapshot(request.resource.data)
+          && request.resource.data.updatedAt >= request.resource.data.createdAt;
+
+        allow update: if isOwner(userId)
+          && hasOnly([
+            'id','title','notes','dueAt','isCompleted','createdAt','updatedAt',
+            'priority','tags','recurrence','reminders','subtasks','attachments',
+            'startAt','durationMin','orderIndex','estimateMin','focusCount','isStarred'
+          ], request.resource.data)
+          && (request.resource.data.id is string && request.resource.data.id == resource.data.id)
+          && isValidTodoSnapshot(request.resource.data)
+          && (request.resource.data.createdAt == resource.data.createdAt)
+          && (request.resource.data.updatedAt >= resource.data.updatedAt);
+
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

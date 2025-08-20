@@ -35,6 +35,7 @@ import {
   validateTodoTitle,
   validateDueDate
 } from '@/lib/todoUtils';
+import SubtaskList from './SubtaskList';
 
 interface TodoItemProps {
   todo: Todo;
@@ -140,6 +141,16 @@ export default function TodoItem({ todo, className = '' }: TodoItemProps) {
 
   const handleDeleteCancel = () => {
     setShowDeleteDialog(false);
+  };
+
+  const handleToggleSubtask = async (id: string, done: boolean) => {
+    if (!todo.subtasks) return;
+    const updated = todo.subtasks.map(s => s.id === id ? { ...s, done } : s);
+    try {
+      await updateTodo(todo.id, { subtasks: updated });
+    } catch (err) {
+      console.error('Error toggling subtask:', err);
+    }
   };
 
   if (isEditing) {
@@ -370,13 +381,19 @@ export default function TodoItem({ todo, className = '' }: TodoItemProps) {
               {todo.dueAt && (
                 <div className="flex items-center gap-1 mt-2">
                   <Clock className={`h-3 w-3 ${overdue && !completed ? 'text-red-500' : 'text-slate-400'}`} />
-                  <span 
+                  <span
                     className={`text-xs ${overdue && !completed ? 'text-red-600 font-medium' : 'text-slate-500'}`}
                     title={formatAbsoluteTime(todo.dueAt)}
                   >
                     {formatRelativeTime(todo.dueAt)}
                   </span>
                 </div>
+              )}
+              {todo.subtasks && (
+                <SubtaskList
+                  subtasks={todo.subtasks}
+                  onToggle={handleToggleSubtask}
+                />
               )}
             </div>
 

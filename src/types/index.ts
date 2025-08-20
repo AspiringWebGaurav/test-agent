@@ -89,6 +89,19 @@ export interface Todo {
   notes?: string;
   dueAt?: Timestamp;
   isCompleted: boolean;
+  /** optional enterprise fields */
+  isStarred?: boolean;
+  priority?: 0|1|2|3|4;
+  tags?: string[];
+  startAt?: Timestamp | null;
+  durationMin?: number | null;
+  recurrence?: string | null;
+  reminders?: Timestamp[];
+  subtasks?: { id: string; title: string; done: boolean }[];
+  attachments?: { name: string; url: string }[];
+  orderIndex?: number | null;
+  estimateMin?: number | null;
+  focusCount?: number | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
