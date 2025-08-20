@@ -1,71 +1,60 @@
 // src/hooks/useTodos.ts
-import useSWR, { mutate } from 'swr';
-import { 
-  collection, 
-  query, 
-  orderBy, 
-  onSnapshot, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
+import { useEffect, useState, useCallback } from 'react';
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  doc,
+  updateDoc,
+  deleteDoc,
   serverTimestamp,
-  Timestamp 
+  Timestamp,
+  type WithFieldValue,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { Todo } from '@/types';
-import { useEffect, useCallback } from 'react';
 
 /**
- * Fetcher function for SWR
+ * Hook for Todo operations using Firestore realtime listeners
  */
-const todosFetcher = async (path: string): Promise<Todo[]> => {
-  return new Promise((resolve, reject) => {
-    const [, uid] = path.split('/');
+export function useTodos() {
+  const { user } = useAuth();
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setTodos([]);
+      return;
+    }
+
     const todosQuery = query(
-      collection(db, 'users', uid, 'todos'),
+      collection(db, 'users', user.uid, 'todos'),
       orderBy('createdAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(
       todosQuery,
       (snapshot) => {
-        const todos = snapshot.docs.map(doc => ({
+        const todosData = snapshot.docs.map(doc => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
         })) as Todo[];
-        resolve(todos);
+        setTodos(todosData);
+        setLoading(false);
       },
-      (error) => {
-        console.error('Error fetching todos:', error);
-        reject(error);
+      (err) => {
+        console.error('Error fetching todos:', err);
+        setError(err);
+        setLoading(false);
       }
     );
 
-    // Return unsubscribe function for cleanup
     return unsubscribe;
-  });
-};
-
-/**
- * Main hook for Todo operations with SWR
- */
-export function useTodos() {
-  const { user } = useAuth();
-  
-  const swrKey = user ? `users/${user.uid}/todos` : null;
-  
-  const { data: todos, error, mutate: mutateTodos } = useSWR<Todo[]>(
-    swrKey,
-    todosFetcher,
-    {
-      refreshInterval: 30000, // Poll every 30 seconds
-      revalidateOnFocus: true,
-      revalidateOnReconnect: true,
-      dedupingInterval: 5000, // Dedupe requests within 5 seconds
-    }
-  );
+  }, [user]);
 
   // Create a new todo
   const createTodo = useCallback(async (todoData: {
@@ -75,10 +64,9 @@ export function useTodos() {
   }) => {
     if (!user) throw new Error('User not authenticated');
 
-    // Generate a unique ID for the todo
     const todoId = `todo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    const newTodo: any = {
+    const newTodo: WithFieldValue<Todo> = {
       id: todoId,
       title: todoData.title.trim(),
       isCompleted: false,
@@ -86,34 +74,18 @@ export function useTodos() {
       updatedAt: serverTimestamp(),
     };
 
-    // Only add optional fields if they have values
     if (todoData.notes?.trim()) {
       newTodo.notes = todoData.notes.trim();
     }
-    
+
     if (todoData.dueAt) {
       newTodo.dueAt = Timestamp.fromDate(todoData.dueAt);
     }
 
-    const cleanTodo = newTodo;
-
-    try {
-      // Use setDoc with the generated ID instead of addDoc
-      const { setDoc } = await import('firebase/firestore');
-      await setDoc(
-        doc(db, 'users', user.uid, 'todos', todoId),
-        cleanTodo
-      );
-      
-      // Optimistically update the cache
-      mutateTodos();
-      
-      return todoId;
-    } catch (error) {
-      console.error('Error creating todo:', error);
-      throw error;
-    }
-  }, [user, mutateTodos]);
+    const { setDoc } = await import('firebase/firestore');
+    await setDoc(doc(db, 'users', user.uid, 'todos', todoId), newTodo);
+    return todoId;
+  }, [user]);
 
   // Update a todo
   const updateTodo = useCallback(async (todoId: string, updates: Partial<Todo>) => {
@@ -122,42 +94,26 @@ export function useTodos() {
     const updateData = {
       ...updates,
       updatedAt: serverTimestamp(),
-    };
+    } as Partial<Todo>;
 
-    // Remove undefined values and id field
-    const { id, createdAt, ...cleanUpdates } = updateData;
+    const cleanUpdates: Record<string, unknown> = { ...updateData };
+    delete cleanUpdates.id;
+    delete cleanUpdates.createdAt;
     const filteredUpdates = Object.fromEntries(
-      Object.entries(cleanUpdates).filter(([_, value]) => value !== undefined)
+      Object.entries(cleanUpdates).filter(([, value]) => value !== undefined)
     );
 
-    try {
-      await updateDoc(
-        doc(db, 'users', user.uid, 'todos', todoId),
-        filteredUpdates
-      );
-      
-      // Optimistically update the cache
-      mutateTodos();
-    } catch (error) {
-      console.error('Error updating todo:', error);
-      throw error;
-    }
-  }, [user, mutateTodos]);
+    await updateDoc(
+      doc(db, 'users', user.uid, 'todos', todoId),
+      filteredUpdates
+    );
+  }, [user]);
 
   // Delete a todo
   const deleteTodo = useCallback(async (todoId: string) => {
     if (!user) throw new Error('User not authenticated');
-
-    try {
-      await deleteDoc(doc(db, 'users', user.uid, 'todos', todoId));
-      
-      // Optimistically update the cache
-      mutateTodos();
-    } catch (error) {
-      console.error('Error deleting todo:', error);
-      throw error;
-    }
-  }, [user, mutateTodos]);
+    await deleteDoc(doc(db, 'users', user.uid, 'todos', todoId));
+  }, [user]);
 
   // Toggle todo completion
   const toggleTodo = useCallback(async (todoId: string, isCompleted: boolean) => {
@@ -167,22 +123,21 @@ export function useTodos() {
   // Snooze a todo (add 30 minutes to due date)
   const snoozeTodo = useCallback(async (todoId: string, currentDueAt?: Timestamp) => {
     const baseTime = currentDueAt ? currentDueAt.toMillis() : Date.now();
-    const snoozeTime = baseTime + (30 * 60 * 1000); // 30 minutes
+    const snoozeTime = baseTime + 30 * 60 * 1000; // 30 minutes
     const newDueAt = Timestamp.fromMillis(snoozeTime);
-    
+
     await updateTodo(todoId, { dueAt: newDueAt });
   }, [updateTodo]);
 
   return {
-    todos: todos || [],
-    loading: !error && !todos,
+    todos,
+    loading,
     error,
     createTodo,
     updateTodo,
     deleteTodo,
     toggleTodo,
     snoozeTodo,
-    mutate: mutateTodos,
   };
 }
 
@@ -191,7 +146,7 @@ export function useTodos() {
  */
 export function useOverdueTodosCount() {
   const { todos } = useTodos();
-  
+
   const overdueCount = todos.filter(todo => {
     if (todo.isCompleted || !todo.dueAt) return false;
     return Date.now() > todo.dueAt.toMillis();
@@ -205,7 +160,7 @@ export function useOverdueTodosCount() {
  */
 export function useOverdueTodos() {
   const { todos, ...rest } = useTodos();
-  
+
   const overdueTodos = todos.filter(todo => {
     if (todo.isCompleted || !todo.dueAt) return false;
     return Date.now() > todo.dueAt.toMillis();

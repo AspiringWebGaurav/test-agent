@@ -8,7 +8,7 @@ The Todo app has been successfully integrated into your existing Gaurav's Person
 
 - ✅ **CRUD Operations**: Create, read, update, and delete todos
 - ✅ **Due Date/Time**: Optional due dates with time support
-- ✅ **Real-time Sync**: 30-second polling with SWR
+- ✅ **Real-time Sync**: Firestore snapshot listeners (no polling)
 - ✅ **Overdue Notifications**: Bell icon with badge count in navbar
 - ✅ **Filters**: All, Active, Completed, Overdue
 - ✅ **Responsive Design**: Works on mobile and desktop
@@ -120,13 +120,7 @@ service cloud.firestore {
 
 ### 2. Dependencies
 
-The following dependency has been added to your project:
-
-```bash
-npm install swr
-```
-
-This is already installed and ready to use.
+No additional dependencies are required. Firestore's built-in real-time listeners are used for updates.
 
 ### 3. File Structure
 
@@ -140,7 +134,7 @@ src/
 │   ├── NotificationsBell.tsx # Bell icon with overdue notifications
 │   └── Filters.tsx           # Filter buttons (All/Active/Completed/Overdue)
 ├── hooks/
-│   └── useTodos.ts           # SWR-based hooks for CRUD operations
+│   └── useTodos.ts           # Firestore-based hooks for CRUD operations
 ├── lib/
 │   └── todoUtils.ts          # Utility functions for time formatting, validation
 ├── types/
@@ -178,7 +172,7 @@ The Todo functionality has been integrated into your existing app:
 
 - **Smart Filters**: Filter by All, Active, Completed, or Overdue
 - **Auto-sorting**: Todos are sorted by priority (overdue first, then by due date)
-- **Real-time Updates**: Changes sync across all devices within 30 seconds
+- **Real-time Updates**: Changes sync across all devices instantly
 
 ### Time Display
 
@@ -231,11 +225,10 @@ Use the filter buttons to view:
 
 ## Technical Details
 
-### SWR Configuration
+### Realtime Listener Configuration
 
-- **Polling**: Every 30 seconds for real-time updates
-- **Revalidation**: On focus and reconnect
-- **Deduplication**: 5-second window to prevent duplicate requests
+- **Instant Updates**: Firestore `onSnapshot` keeps todos in sync
+- **Auto Cleanup**: Listener unsubscribes on unmount
 
 ### Performance
 
@@ -255,7 +248,7 @@ Use the filter buttons to view:
 
 1. **Todos not loading**: Check Firestore rules are updated
 2. **Permission denied**: Ensure user is authenticated
-3. **Real-time not working**: Check network connection and SWR polling
+3. **Real-time not working**: Check network connection and Firestore listener setup
 
 ### Debug Steps
 
