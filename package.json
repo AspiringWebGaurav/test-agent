@@ -18,7 +18,6 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "test": "vitest run",
     "deploy": "vercel --prod",
     "firebase:deploy": "firebase deploy --only firestore:rules"
   },
@@ -45,9 +44,6 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
-    "@testing-library/jest-dom": "^6.4.2",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^14.5.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -55,10 +51,8 @@
     "@vitejs/plugin-react": "^4.2.1",
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
-    "jsdom": "^26.1.0",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.7",
-    "typescript": "^5",
-    "vitest": "^1.6.0"
+    "typescript": "^5"
   }
 }
