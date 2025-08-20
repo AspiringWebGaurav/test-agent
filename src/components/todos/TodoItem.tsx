@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Timestamp } from 'firebase/firestore';
 import {
   Check,
   Clock,
@@ -105,7 +106,7 @@ export default function TodoItem({ todo, className = '' }: TodoItemProps) {
       await updateTodo(todo.id, {
         title: editTitle.trim(),
         notes: editNotes.trim() || undefined,
-        dueAt: dueAt ? { toMillis: () => dueAt!.getTime() } as any : undefined,
+        dueAt: dueAt ? Timestamp.fromDate(dueAt) : undefined,
       });
       setIsEditing(false);
     } catch (err) {
