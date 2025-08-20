@@ -3,8 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SyncStatusProvider } from "@/components/SyncStatusProvider";
-import GlobalNavbar from "@/components/GlobalNavbar";
-import Breadcrumb from "@/components/Breadcrumb";
+import Navbar from "@/components/Navbar";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,8 +32,7 @@ export default function RootLayout({
       <body className="font-sans antialiased bg-gray-50 text-gray-900 min-h-screen">
         <AuthProvider>
           <SyncStatusProvider>
-            <GlobalNavbar />
-            <Breadcrumb />
+            <Navbar />
             {children}
           </SyncStatusProvider>
         </AuthProvider>
