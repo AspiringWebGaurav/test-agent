@@ -95,6 +95,24 @@ body {
   overflow-x: hidden;
 }
 
+/* Utility classes */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);

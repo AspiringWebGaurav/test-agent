@@ -32,7 +32,10 @@ export default function Filters({ activeFilter, onFilterChange, className = '' }
   ];
 
   return (
-    <div className={`flex flex-wrap gap-2 ${className}`}>
+    <div
+      className={`overflow-x-auto scrollbar-none touch-pan-x sm:overflow-visible -mx-4 sm:mx-0 ${className}`}
+    >
+      <div className="flex gap-2 snap-x snap-mandatory px-4 sm:px-0 sm:flex-wrap">
       {filters.map((filter) => {
         const isActive = activeFilter === filter.key;
         const count = counts[filter.key];
@@ -44,7 +47,7 @@ export default function Filters({ activeFilter, onFilterChange, className = '' }
             whileTap={{ scale: 0.98 }}
             onClick={() => onFilterChange(filter.key)}
             className={`
-              relative inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all
+              relative inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all snap-start touch-target
               ${isActive
                 ? 'bg-slate-900 text-white shadow-lg dark:bg-white dark:text-slate-900'
                 : 'bg-white/70 text-slate-700 hover:bg-white hover:shadow-md dark:bg-slate-800/50 dark:text-slate-200 dark:hover:bg-slate-800'
@@ -78,6 +81,7 @@ export default function Filters({ activeFilter, onFilterChange, className = '' }
           </motion.button>
         );
       })}
+      </div>
     </div>
   );
 }

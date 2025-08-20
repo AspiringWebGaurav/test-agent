@@ -117,7 +117,13 @@ export function useTodos() {
 
   // Toggle todo completion
   const toggleTodo = useCallback(async (todoId: string, isCompleted: boolean) => {
-    await updateTodo(todoId, { isCompleted });
+    setTodos(prev => prev.map(t => t.id === todoId ? { ...t, isCompleted } : t));
+    try {
+      await updateTodo(todoId, { isCompleted });
+    } catch (err) {
+      setTodos(prev => prev.map(t => t.id === todoId ? { ...t, isCompleted: !isCompleted } : t));
+      throw err;
+    }
   }, [updateTodo]);
 
   // Snooze a todo (add 30 minutes to due date)

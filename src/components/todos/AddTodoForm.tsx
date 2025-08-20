@@ -139,7 +139,7 @@ export default function AddTodoForm({ onSuccess, className = '' }: AddTodoFormPr
             </div>
 
             {/* Due Date/Time */}
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1">
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -153,7 +153,7 @@ export default function AddTodoForm({ onSuccess, className = '' }: AddTodoFormPr
                 </div>
               </div>
               {dueDate && (
-                <div className="w-32">
+                <div className="sm:w-32">
                   <Input
                     type="time"
                     value={dueTime}
@@ -172,11 +172,11 @@ export default function AddTodoForm({ onSuccess, className = '' }: AddTodoFormPr
             )}
 
             {/* Actions */}
-            <div className="flex gap-2 pt-2">
+            <div className="flex flex-col sm:flex-row gap-2 pt-2 sticky sm:static bottom-0 bg-white/80 dark:bg-slate-900/80 pb-2">
               <Button
                 type="submit"
                 disabled={!title.trim() || isSubmitting}
-                className="flex-1"
+                className="flex-1 touch-target"
               >
                 {isSubmitting ? (
                   <>
@@ -195,6 +195,7 @@ export default function AddTodoForm({ onSuccess, className = '' }: AddTodoFormPr
                 variant="outline"
                 onClick={handleCancel}
                 disabled={isSubmitting}
+                className="touch-target"
               >
                 <X className="h-4 w-4" />
               </Button>

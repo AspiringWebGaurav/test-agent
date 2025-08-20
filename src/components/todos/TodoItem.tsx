@@ -1,7 +1,7 @@
 // src/components/todos/TodoItem.tsx
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Timestamp } from 'firebase/firestore';
 import {
@@ -56,6 +56,8 @@ export default function TodoItem({ todo, className = '' }: TodoItemProps) {
   const [error, setError] = useState('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [swipeX, setSwipeX] = useState(0);
+  const editRef = useRef<HTMLDivElement>(null);
 
   const { updateTodo, deleteTodo, toggleTodo } = useTodos();
 
@@ -153,6 +155,24 @@ export default function TodoItem({ todo, className = '' }: TodoItemProps) {
     }
   };
 
+  useEffect(() => {
+    if (!isEditing) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleCancel();
+    };
+    const handleClick = (e: MouseEvent) => {
+      if (editRef.current && !editRef.current.contains(e.target as Node)) {
+        handleCancel();
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+    document.addEventListener('mousedown', handleClick);
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      document.removeEventListener('mousedown', handleClick);
+    };
+  }, [isEditing]);
+
   if (isEditing) {
     return (
       <motion.div
@@ -160,7 +180,7 @@ export default function TodoItem({ todo, className = '' }: TodoItemProps) {
         animate={{ opacity: 1, y: 0 }}
         className={className}
       >
-        <Card className="bg-white/80 dark:bg-slate-900/60 backdrop-blur border-slate-200/70 dark:border-slate-800/70">
+        <Card className="bg-white/80 dark:bg-slate-900/60 backdrop-blur border-slate-200/70 dark:border-slate-800/70" ref={editRef}>
           <CardContent className="p-4">
             <div className="space-y-3">
               {/* Title Input */}
@@ -331,24 +351,57 @@ export default function TodoItem({ todo, className = '' }: TodoItemProps) {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={className}
+      className={`relative ${className}`}
     >
-      <Card className={`
+      {/* Swipe actions */}
+      <div className="absolute inset-y-0 right-0 flex items-center gap-2 pr-2 sm:hidden">
+        <Button
+          onClick={handleToggleComplete}
+          size="sm"
+          aria-label={completed ? 'Mark incomplete' : 'Mark complete'}
+          className="touch-target"
+        >
+          <Check className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={handleDeleteClick}
+          size="sm"
+          variant="destructive"
+          aria-label="Delete todo"
+          className="touch-target"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: -96, right: 0 }}
+        dragElastic={0.2}
+        onDragEnd={(_, info) => {
+          if (info.offset.x < -40) setSwipeX(-96);
+          else setSwipeX(0);
+        }}
+        animate={{ x: swipeX }}
+        className="touch-pan-y"
+      >
+        <Card className={`
         group transition-all duration-200 hover:shadow-md
-        ${completed 
-          ? 'bg-slate-50/80 dark:bg-slate-900/40 border-slate-200/50 dark:border-slate-800/50' 
+        ${completed
+          ? 'bg-slate-50/80 dark:bg-slate-900/40 border-slate-200/50 dark:border-slate-800/50'
           : 'bg-white/80 dark:bg-slate-900/60 border-slate-200/70 dark:border-slate-800/70'
         }
         ${overdue && !completed ? 'border-red-200 dark:border-red-800/50 bg-red-50/50 dark:bg-red-900/10' : ''}
         backdrop-blur
       `}>
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            {/* Checkbox */}
-            <button
-              onClick={handleToggleComplete}
-              className={`
-                mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-all
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              {/* Checkbox */}
+              <button
+                onClick={handleToggleComplete}
+                aria-label={completed ? 'Mark incomplete' : 'Mark complete'}
+                className={`
+                mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-all touch-target
                 ${completed
                   ? 'bg-green-500 border-green-500 text-white'
                   : overdue
@@ -356,69 +409,93 @@ export default function TodoItem({ todo, className = '' }: TodoItemProps) {
                   : 'border-slate-300 hover:border-slate-400 dark:border-slate-600 dark:hover:border-slate-500'
                 }
               `}
-            >
-              {completed && <Check className="h-3 w-3" />}
-            </button>
+              >
+                {completed && <Check className="h-3 w-3" />}
+              </button>
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <div className={`
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className={`
                 font-medium transition-all
                 ${completed ? 'line-through text-slate-500 dark:text-slate-400' : 'text-slate-900 dark:text-slate-100'}
               `}>
-                {todo.title}
-              </div>
+                  {todo.title}
+                </div>
 
-              {todo.notes && (
-                <div className={`
-                  text-sm mt-1 transition-all
+                {todo.notes && (
+                  <div className={`
+                  text-sm mt-1 transition-all line-clamp-2
                   ${completed ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300'}
                 `}>
-                  {todo.notes}
-                </div>
-              )}
+                    {todo.notes}
+                  </div>
+                )}
 
-              {todo.dueAt && (
-                <div className="flex items-center gap-1 mt-2">
-                  <Clock className={`h-3 w-3 ${overdue && !completed ? 'text-red-500' : 'text-slate-400'}`} />
-                  <span
-                    className={`text-xs ${overdue && !completed ? 'text-red-600 font-medium' : 'text-slate-500'}`}
-                    title={formatAbsoluteTime(todo.dueAt)}
+                {todo.dueAt && (
+                  <div className="flex items-center gap-1 mt-2">
+                    <Clock className={`h-3 w-3 ${overdue && !completed ? 'text-red-500' : 'text-slate-400'}`} />
+                    <span
+                      className={`text-xs ${overdue && !completed ? 'text-red-600 font-medium' : 'text-slate-500'}`}
+                      title={formatAbsoluteTime(todo.dueAt)}
+                    >
+                      {formatRelativeTime(todo.dueAt)}
+                    </span>
+                  </div>
+                )}
+                {todo.subtasks && (
+                  <SubtaskList
+                    subtasks={todo.subtasks}
+                    onToggle={handleToggleSubtask}
+                  />
+                )}
+                {/* Mobile actions */}
+                <div className="flex gap-2 mt-3 sm:hidden">
+                  <Button
+                    onClick={handleEdit}
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 touch-target"
+                    aria-label="Edit todo"
                   >
-                    {formatRelativeTime(todo.dueAt)}
-                  </span>
+                    <Edit3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={handleDeleteClick}
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 touch-target text-red-600 border-red-300"
+                    aria-label="Delete todo"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
-              {todo.subtasks && (
-                <SubtaskList
-                  subtasks={todo.subtasks}
-                  onToggle={handleToggleSubtask}
-                />
-              )}
-            </div>
+              </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button
-                onClick={handleEdit}
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-              >
-                <Edit3 className="h-4 w-4" />
-              </Button>
-              <Button
-                onClick={handleDeleteClick}
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {/* Desktop Actions */}
+              <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button
+                  onClick={handleEdit}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  aria-label="Edit todo"
+                >
+                  <Edit3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={handleDeleteClick}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  aria-label="Delete todo"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

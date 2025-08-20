@@ -19,7 +19,8 @@
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "deploy": "vercel --prod",
-    "firebase:deploy": "firebase deploy --only firestore:rules"
+    "firebase:deploy": "firebase deploy --only firestore:rules",
+    "test": "vitest run"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
@@ -49,6 +50,11 @@
     "@types/react-dom": "^19",
     "@types/recharts": "^1.8.29",
     "@vitejs/plugin-react": "^4.2.1",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/user-event": "^14.5.2",
+    "jsdom": "^26.0.0",
+    "vitest": "^2.1.2",
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
     "tailwindcss": "^4",
